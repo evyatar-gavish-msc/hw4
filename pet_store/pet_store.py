@@ -111,9 +111,9 @@ def remove_image_file(filename):
 @app.route('/pet-types', methods=['GET'])
 def get_pet_types():
     params = request.args.to_dict()
-    
+
     all_types = list(pet_types_collection.find())
-    
+
     if not params:
         return jsonify([clean_pet_type(p) for p in all_types]), 200
 
@@ -286,7 +286,7 @@ def add_pet(pet_type_id):
         }
 
         pets_collection.insert_one(pet_obj)
-        
+
         # Update pet_types with the pet name
         pet_types_collection.update_one(
             {"id": pet_type_id},

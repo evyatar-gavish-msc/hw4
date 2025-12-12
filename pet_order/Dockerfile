@@ -6,8 +6,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY pet_order.py .
 
-ENV MONGO_URI=mongodb://localhost:27017/
-
 EXPOSE 5003
 
 CMD ["python", "pet_order.py"]
