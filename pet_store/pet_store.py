@@ -61,7 +61,9 @@ def download_image(url):
         if resp.status_code != 200:
             return None
 
-        ext = os.path.splitext(url)[1].lower() or '.jpg'
+        url_path = url.split('?')[0]  # remove query parameters
+        ext = os.path.splitext(url_path)[1].lower() or '.jpg'
+
         if ext == '.jpeg':
             ext = '.jpg'
         fname = f"{uuid.uuid4()}{ext}"
