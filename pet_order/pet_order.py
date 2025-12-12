@@ -13,7 +13,7 @@ transactions_collection = db['transactions']
 counters_collection = db['counters']
 PET_STORE1_URL = os.environ.get('PET_STORE1_URL', 'http://pet-store1:5001')
 PET_STORE2_URL = os.environ.get('PET_STORE2_URL', 'http://pet-store2:5001')
-OWNER_PASSWORD = "LovesPetsL2M3n4!"
+OWNER_PASSWORD = "LovesPetsL2M3n4"
 
 
 def get_next_purchase_id():
