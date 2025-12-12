@@ -11,8 +11,10 @@ app = Flask(__name__)
 
 # MongoDB connection
 MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/')
+DB_NAME = os.environ.get('DB_NAME', 'pet_store')  # DB_NAME is from docker compose so each store will get a separate db
+
 mongo_client = MongoClient(MONGO_URI)
-db = mongo_client['pet_store']
+db = mongo_client[DB_NAME]
 pet_types_collection = db['pet_types']
 pets_collection = db['pets']
 
@@ -492,6 +494,12 @@ def get_picture(file_name):
 
     return send_file(path, mimetype=mtype), 200
 
+@app.route('/kill', methods=['GET'])
+def kill_container():
+    os._exit(1)
+
+
 if __name__ == '__main__':
-    print("Running pets server")
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    port = int(os.environ.get('PORT', 5001))
+    print(f"Running pets server on port {port}")
+    app.run(host='0.0.0.0', port=port, debug=True)

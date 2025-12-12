@@ -9,19 +9,43 @@ services:
     networks:
       - pet-store-network
 
-  pet-store:
+  pet-store1:
     build: .
-    container_name: pet-store-app
+    container_name: pet-store1
     ports:
       - "5001:5001"
+    expose:
+      - 5001
     environment:
       - MONGO_URI=mongodb://mongodb:27017/
+      - DB_NAME=pet_store1
+      - PORT=5001
     depends_on:
       - mongodb
     volumes:
       - ./images:/app/images
     networks:
       - pet-store-network
+    restart: on-failure
+
+  pet-store2:
+    build: .
+    container_name: pet-store2
+    ports:
+      - "5002:5001"
+    expose:
+      - 5001
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/
+      - DB_NAME=pet_store2
+      - PORT=5001
+    depends_on:
+      - mongodb
+    volumes:
+      - ./images:/app/images
+    networks:
+      - pet-store-network
+    restart: on-failure
 
 networks:
   pet-store-network:
@@ -29,4 +53,3 @@ networks:
 
 volumes:
   mongodb_data:
-
