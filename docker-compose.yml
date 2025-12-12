@@ -47,6 +47,28 @@ services:
       - pet-store-network
     restart: on-failure
 
+  pet-order:
+    build:
+      context: .
+      dockerfile: Dockerfile.petorder
+    container_name: pet-order
+    ports:
+      - "5003:5003"
+    expose:
+      - 5003
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/
+      - PORT=5003
+      - PET_STORE1_URL=http://pet-store1:5001
+      - PET_STORE2_URL=http://pet-store2:5001
+    depends_on:
+      - mongodb
+      - pet-store1
+      - pet-store2
+    networks:
+      - pet-store-network
+    restart: on-failure
+
 networks:
   pet-store-network:
     driver: bridge
