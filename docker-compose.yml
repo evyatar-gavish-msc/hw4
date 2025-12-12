@@ -47,9 +47,9 @@ services:
       - pet-store-network
     restart: on-failure
 
-  pet-order:
+  pet-order1:
     build: ./pet_order
-    container_name: pet-order
+    container_name: pet-order1
     ports:
       - "5003:5003"
     expose:
@@ -66,6 +66,39 @@ services:
     networks:
       - pet-store-network
     restart: on-failure
+
+  pet-order2:
+    build: ./pet_order
+    container_name: pet-order2
+    expose:
+      - 5003
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/
+      - PORT=5003
+      - PET_STORE1_URL=http://pet-store1:5001
+      - PET_STORE2_URL=http://pet-store2:5001
+    depends_on:
+      - mongodb
+      - pet-store1
+      - pet-store2
+    networks:
+      - pet-store-network
+    restart: on-failure
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - pet-store1
+      - pet-store2
+      - pet-order1
+      - pet-order2
+    networks:
+      - pet-store-network
 
 networks:
   pet-store-network:
