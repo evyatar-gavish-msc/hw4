@@ -129,6 +129,11 @@ def create_purchase():
         if 'purchaser' not in data or 'pet-type' not in data:
             return jsonify({"error": "Malformed data"}), 400
 
+        # reject extra fields
+        allowed_fields = {'purchaser', 'pet-type', 'store', 'pet-name'}
+        if not set(data.keys()).issubset(allowed_fields):
+            return jsonify({"error": "Malformed data"}), 400
+
         purchaser = data['purchaser']
         pet_type = data['pet-type']
         store = data.get('store')
