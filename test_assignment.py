@@ -13,7 +13,7 @@ import pytest
 import json
 import os
 import shutil
-from app import app, Pets, PetObjects, pet_id
+from pet_store import app, Pets, PetObjects, pet_id
 
 # Set up test client
 @pytest.fixture
