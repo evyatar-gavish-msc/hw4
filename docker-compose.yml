@@ -10,7 +10,7 @@ services:
       - pet-store-network
 
   pet-store1:
-    build: .
+    build: ./pet_store
     container_name: pet-store1
     ports:
       - "5001:5001"
@@ -29,7 +29,7 @@ services:
     restart: on-failure
 
   pet-store2:
-    build: .
+    build: ./pet_store
     container_name: pet-store2
     ports:
       - "5002:5001"
@@ -48,9 +48,7 @@ services:
     restart: on-failure
 
   pet-order:
-    build:
-      context: .
-      dockerfile: Dockerfile.petorder
+    build: ./pet_order
     container_name: pet-order
     ports:
       - "5003:5003"
