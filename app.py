@@ -492,7 +492,6 @@ def get_picture(file_name):
 
     return send_file(path, mimetype=mtype), 200
 
-
 if __name__ == '__main__':
     print("Running pets server")
     app.run(host='0.0.0.0', port=5001, debug=True)
