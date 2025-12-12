@@ -226,4 +226,3 @@ def kill_container():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5003))
     print(f"Running pet-order service on port {port}")
-    app.run(host='0.0.0.0', port=port, debug=True)
