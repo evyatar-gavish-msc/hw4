@@ -1,11 +1,21 @@
 services:
-  mongodb:
+  mongodb-stores:
     image: mongo:6.0
-    container_name: pet-store-mongodb
+    container_name: mongodb-stores
     ports:
       - "27017:27017"
     volumes:
-      - mongodb_data:/data/db
+      - mongodb_stores_data:/data/db
+    networks:
+      - pet-store-network
+
+  mongodb-orders:
+    image: mongo:6.0
+    container_name: mongodb-orders
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb_orders_data:/data/db
     networks:
       - pet-store-network
 
@@ -17,11 +27,11 @@ services:
     expose:
       - 5001
     environment:
-      - MONGO_URI=mongodb://mongodb:27017/
+      - MONGO_URI=mongodb://mongodb-stores:27017/
       - DB_NAME=pet_store1
       - PORT=5001
     depends_on:
-      - mongodb
+      - mongodb-stores
     volumes:
       - ./images:/app/images
     networks:
@@ -36,11 +46,11 @@ services:
     expose:
       - 5001
     environment:
-      - MONGO_URI=mongodb://mongodb:27017/
+      - MONGO_URI=mongodb://mongodb-stores:27017/
       - DB_NAME=pet_store2
       - PORT=5001
     depends_on:
-      - mongodb
+      - mongodb-stores
     volumes:
       - ./images:/app/images
     networks:
@@ -55,12 +65,12 @@ services:
     expose:
       - 5003
     environment:
-      - MONGO_URI=mongodb://mongodb:27017/
+      - MONGO_URI=mongodb://mongodb-orders:27017/
       - PORT=5003
       - PET_STORE1_URL=http://pet-store1:5001
       - PET_STORE2_URL=http://pet-store2:5001
     depends_on:
-      - mongodb
+      - mongodb-orders
       - pet-store1
       - pet-store2
     networks:
@@ -73,12 +83,12 @@ services:
     expose:
       - 5003
     environment:
-      - MONGO_URI=mongodb://mongodb:27017/
+      - MONGO_URI=mongodb://mongodb-orders:27017/
       - PORT=5003
       - PET_STORE1_URL=http://pet-store1:5001
       - PET_STORE2_URL=http://pet-store2:5001
     depends_on:
-      - mongodb
+      - mongodb-orders
       - pet-store1
       - pet-store2
     networks:
@@ -105,4 +115,5 @@ networks:
     driver: bridge
 
 volumes:
-  mongodb_data:
+  mongodb_stores_data:
+  mongodb_orders_data:
