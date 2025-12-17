@@ -395,7 +395,6 @@ def update_pet(pet_type_id, name):
         cur_pic = pet.get("picture", "NA")
 
         if new_url is None:
-            # picture-url not supplied, reset to NA
             if cur_pic != "NA":
                 remove_image_file(cur_pic)
             cur_pic = "NA"
