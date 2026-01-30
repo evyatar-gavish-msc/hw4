@@ -1,0 +1,219 @@
+name: assignment4
+
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize log.txt (lines 1-2)
+        shell: bash
+        run: |
+          set -euo pipefail
+          start_time="$(date -Iminutes)"
+          echo "${start_time}" > log.txt
+          echo "Lior Krinberg, Evyatar Gavish" >> log.txt
+
+      - name: Build images (pet-store, pet-order)
+        id: build_images
+        shell: bash
+        run: |
+          set +e
+          store_ok=0
+          order_ok=0
+
+          docker build -t pet-store:assn4 ./pet_store
+          store_ok=$?
+
+          docker build -t pet-order:assn4 ./pet_order
+          order_ok=$?
+
+          # line 3: build results
+          if [ "${store_ok}" -eq 0 ]; then
+            s_msg="image pet-store successfully built;"
+          else
+            s_msg="image pet-store not able to be built;"
+          fi
+
+          if [ "${order_ok}" -eq 0 ]; then
+            o_msg="image pet-order successfully built;"
+          else
+            o_msg="image pet-order not able to be built;"
+          fi
+
+          echo "${s_msg} ${o_msg}" >> log.txt
+
+          # Fail build job if either image failed.
+          if [ "${store_ok}" -ne 0 ] || [ "${order_ok}" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Save images to artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker save pet-store:assn4 pet-order:assn4 -o images_assn4.tar
+
+      - name: Upload images artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: images_assn4
+          path: images_assn4.tar
+
+      - name: Upload log artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: log
+          path: log.txt
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download images artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: images_assn4
+
+      - name: Download log artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: log
+
+      - name: Load docker images
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker load -i images_assn4.tar
+
+      - name: Start app containers
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose up -d
+
+          # Determine container start success for required containers.
+          names="$(docker ps --format '{{.Names}}' | tr '\n' ' ')"
+
+          c1="Container pet-store #1 failed to run;"
+          c2="Container pet-store #2 failed to run;"
+          co="Container pet-order failed to run;"
+
+          if echo "${names}" | grep -q "\bpet-store1\b"; then c1="Container pet-store #1 up and running;"; fi
+          if echo "${names}" | grep -q "\bpet-store2\b"; then c2="Container pet-store #2 up and running;"; fi
+          if echo "${names}" | grep -q "\bpet-order\b"; then co="Container pet-order up and running;"; fi
+
+          # line 4
+          echo "${c1} ${c2} ${co}" >> log.txt
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install pytest requests
+
+      - name: Run pytest and capture output
+        id: run_pytest
+        shell: bash
+        run: |
+          set -o pipefail
+          pytest -v tests/assn4_tests.py | tee assn4_test_results.txt
+
+      - name: Update log with pytest result (line 5)
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.run_pytest.outcome }}" = "success" ]; then
+            echo "All pytests succeeded" >> log.txt
+          else
+            echo "pytests failed" >> log.txt
+          fi
+
+      - name: Upload test results artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: assn4_test_results
+          path: assn4_test_results.txt
+
+      - name: Upload log artifact (updated)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: log
+          path: log.txt
+
+      - name: Stop containers
+        if: always()
+        shell: bash
+        run: |
+          docker compose down -v || true
+
+  query:
+    runs-on: ubuntu-latest
+    needs: test
+    if: needs.test.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download images artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: images_assn4
+
+      - name: Load docker images
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker load -i images_assn4.tar
+
+      - name: Start app containers
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose up -d
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install query dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Run query job (generate response.txt)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/run_query_job.py
+
+      - name: Upload response artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: response
+          path: response.txt
+
+      - name: Stop containers
+        if: always()
+        shell: bash
+        run: |
+          docker compose down -v || true
+
+
