@@ -130,7 +130,7 @@ def create_purchase():
             return jsonify({"error": "Malformed data"}), 400
 
         # reject extra fields
-        allowed_fields = {'purchaser', 'pet-type', 'store', 'pet-name'}
+        allowed_fields = {'purchaser', 'pet-type', 'store', 'pet-name', 'purchase-id'}
         if not set(data.keys()).issubset(allowed_fields):
             return jsonify({"error": "Malformed data"}), 400
 
@@ -222,10 +222,6 @@ def get_transactions():
         })
 
     return jsonify(result), 200
-
-@app.route('/kill', methods=['GET'])
-def kill_container():
-    os._exit(1)
 
 
 if __name__ == '__main__':
