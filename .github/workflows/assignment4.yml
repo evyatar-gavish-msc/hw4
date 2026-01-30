@@ -12,49 +12,39 @@ jobs:
       - name: Initialize log.txt (lines 1-2)
         shell: bash
         run: |
-          set -euo pipefail
           start_time="$(date -Iminutes)"
           echo "${start_time}" > log.txt
           echo "Lior Krinberg, Evyatar Gavish" >> log.txt
 
       - name: Build images (pet-store, pet-order)
-        id: build_images
         shell: bash
         run: |
-          set +e
-          store_ok=0
-          order_ok=0
+          failed=0
 
-          docker build -t pet-store:assn4 ./pet_store
-          store_ok=$?
-
-          docker build -t pet-order:assn4 ./pet_order
-          order_ok=$?
-
-          # line 3: build results
-          if [ "${store_ok}" -eq 0 ]; then
+          if docker build -t pet-store:assn4 ./pet_store; then
             s_msg="image pet-store successfully built;"
           else
             s_msg="image pet-store not able to be built;"
+            failed=1
           fi
 
-          if [ "${order_ok}" -eq 0 ]; then
+          if docker build -t pet-order:assn4 ./pet_order; then
             o_msg="image pet-order successfully built;"
           else
             o_msg="image pet-order not able to be built;"
+            failed=1
           fi
 
+          # line 3
           echo "${s_msg} ${o_msg}" >> log.txt
 
-          # Fail build job if either image failed.
-          if [ "${store_ok}" -ne 0 ] || [ "${order_ok}" -ne 0 ]; then
+          if [ "${failed}" -ne 0 ]; then
             exit 1
           fi
 
       - name: Save images to artifacts
         shell: bash
         run: |
-          set -euo pipefail
           docker save pet-store:assn4 pet-order:assn4 -o images_assn4.tar
 
       - name: Upload images artifact
@@ -91,13 +81,11 @@ jobs:
       - name: Load docker images
         shell: bash
         run: |
-          set -euo pipefail
           docker load -i images_assn4.tar
 
       - name: Start app containers
         shell: bash
         run: |
-          set -euo pipefail
           docker compose up -d
 
           # Determine container start success for required containers.
@@ -107,9 +95,9 @@ jobs:
           c2="Container pet-store #2 failed to run;"
           co="Container pet-order failed to run;"
 
-          if echo "${names}" | grep -q "\bpet-store1\b"; then c1="Container pet-store #1 up and running;"; fi
-          if echo "${names}" | grep -q "\bpet-store2\b"; then c2="Container pet-store #2 up and running;"; fi
-          if echo "${names}" | grep -q "\bpet-order\b"; then co="Container pet-order up and running;"; fi
+          if echo "${names}" | grep -q "pet-store1"; then c1="Container pet-store #1 up and running;"; fi
+          if echo "${names}" | grep -q "pet-store2"; then c2="Container pet-store #2 up and running;"; fi
+          if echo "${names}" | grep -q "pet-order"; then co="Container pet-order up and running;"; fi
 
           # line 4
           echo "${c1} ${c2} ${co}" >> log.txt
@@ -117,10 +105,9 @@ jobs:
       - name: Wait for ports 5001/5002/5003
         shell: bash
         run: |
-          set -euo pipefail
           for port in 5001 5002 5003; do
             echo "Waiting for localhost:${port}..."
-            for i in $(seq 1 60); do
+            for i in $(seq 1 30); do
               if curl -sS "http://localhost:${port}/pet-types" >/dev/null 2>&1 || curl -sS "http://localhost:${port}/purchases" >/dev/null 2>&1; then
                 break
               fi
@@ -136,7 +123,6 @@ jobs:
       - name: Install test dependencies
         shell: bash
         run: |
-          set -euo pipefail
           python -m pip install --upgrade pip
           pip install pytest requests
 
@@ -144,14 +130,12 @@ jobs:
         id: run_pytest
         shell: bash
         run: |
-          set -o pipefail
-          pytest -v tests/assn4_tests.py | tee assn4_test_results.txt
+          pytest -v tests/assn4_tests.py > assn4_test_results.txt
 
       - name: Update log with pytest result (line 5)
         if: always()
         shell: bash
         run: |
-          set -euo pipefail
           if [ "${{ steps.run_pytest.outcome }}" = "success" ]; then
             echo "All pytests succeeded" >> log.txt
           else
@@ -196,22 +180,19 @@ jobs:
       - name: Load docker images
         shell: bash
         run: |
-          set -euo pipefail
           docker load -i images_assn4.tar
 
       - name: Start app containers
         shell: bash
         run: |
-          set -euo pipefail
           docker compose up -d
 
       - name: Wait for ports 5001/5002/5003
         shell: bash
         run: |
-          set -euo pipefail
           for port in 5001 5002 5003; do
             echo "Waiting for localhost:${port}..."
-            for i in $(seq 1 60); do
+            for i in $(seq 1 30); do
               if curl -sS "http://localhost:${port}/pet-types" >/dev/null 2>&1 || curl -sS "http://localhost:${port}/purchases" >/dev/null 2>&1; then
                 break
               fi
@@ -227,14 +208,12 @@ jobs:
       - name: Install query dependencies
         shell: bash
         run: |
-          set -euo pipefail
           python -m pip install --upgrade pip
           pip install requests
 
       - name: Run query job (generate response.txt)
         shell: bash
         run: |
-          set -euo pipefail
           python scripts/run_query_job.py
 
       - name: Upload response artifact

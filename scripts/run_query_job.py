@@ -1,8 +1,5 @@
 import json
-import re
-import sys
 import time
-from pathlib import Path
 
 import requests
 
@@ -22,7 +19,7 @@ PET7_TYPE4 = {"name": "Lazy", "birthdate": "07-08-2018"}
 PET8_TYPE4 = {"name": "Lemon", "birthdate": "27-03-2020"}
 
 
-def base_url(store_num: int) -> str:
+def base_url(store_num):
     if store_num == 1:
         return "http://localhost:5001"
     if store_num == 2:
@@ -30,7 +27,7 @@ def base_url(store_num: int) -> str:
     raise ValueError("store_num must be 1 or 2")
 
 
-def wait_for_service(url: str, timeout_s: int = 60) -> None:
+def wait_for_service(url, timeout_s=60):
     deadline = time.time() + timeout_s
     last_exc = None
     while time.time() < deadline:
@@ -38,7 +35,7 @@ def wait_for_service(url: str, timeout_s: int = 60) -> None:
             r = requests.get(url, timeout=2)
             if r.status_code in (200, 400, 404, 405, 415):
                 return
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             last_exc = e
         time.sleep(1)
     raise RuntimeError(f"Service not reachable at {url} (last_exc={last_exc})")
@@ -85,72 +82,91 @@ def seed_data() -> None:
             raise RuntimeError(f"Seed failed creating pet: {r.status_code} {r.text}")
 
 
-QUERY_RE = re.compile(r"^\s*query:\s*([12])\s*,\s*([^;]+)\s*;\s*$")
-PURCHASE_RE = re.compile(r"^\s*purchase:\s*(\{.*\})\s*;\s*$")
+def write_entry(f, status_code, payload):
+    f.write(f"{status_code}\n")
+    if payload is None:
+        f.write("NONE\n")
+    else:
+        f.write(json.dumps(payload, indent=2, ensure_ascii=False))
+        f.write("\n")
+    f.write(";\n")
 
 
-def write_entry(out: Path, status_code: int, payload) -> None:
-    with out.open("a", encoding="utf-8") as f:
-        f.write(f"{status_code}\n")
-        if payload is None:
-            f.write("NONE\n")
-        else:
-            f.write(json.dumps(payload, indent=2, ensure_ascii=False))
-            f.write("\n")
-        f.write(";\n")
+def main():
+    query_path = "query.txt"
+    response_path = "response.txt"
 
-
-def main() -> int:
-    repo_root = Path(__file__).resolve().parents[1]
-    query_path = repo_root / "query.txt"
-    response_path = repo_root / "response.txt"
-    response_path.write_text("", encoding="utf-8")
+    with open(response_path, "w", encoding="utf-8") as f:
+        pass
 
     seed_data()
 
-    if not query_path.exists():
+    try:
+        with open(query_path, "r", encoding="utf-8") as f:
+            lines = f.read().splitlines()
+    except FileNotFoundError:
         return 0
 
-    for line in query_path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-
-        m = QUERY_RE.match(line)
-        if m:
-            store_num = int(m.group(1))
-            query_string = m.group(2).strip()
-            url = f"{base_url(store_num)}/pet-types?{query_string}"
-            try:
-                r = requests.get(url, timeout=10)
-                if r.status_code == 200:
-                    write_entry(response_path, r.status_code, r.json())
-                else:
-                    write_entry(response_path, r.status_code, None)
-            except Exception:
-                write_entry(response_path, 500, None)
-            continue
-
-        m = PURCHASE_RE.match(line)
-        if m:
-            payload_raw = m.group(1)
-            try:
-                payload = json.loads(payload_raw)
-            except Exception:  # noqa: BLE001
-                write_entry(response_path, 400, None)
+    with open(response_path, "a", encoding="utf-8") as out:
+        for line in lines:
+            line = line.strip()
+            if not line:
                 continue
 
-            try:
-                r = requests.post("http://localhost:5003/purchases", json=payload, timeout=10)
-                if r.status_code == 201:
-                    write_entry(response_path, r.status_code, r.json())
-                else:
-                    write_entry(response_path, r.status_code, None)
-            except Exception:  # noqa: BLE001
-                write_entry(response_path, 500, None)
-            continue
+            if line.startswith("query:"):
+                # format: query: <store>,<query-string>;
+                if not line.endswith(";"):
+                    write_entry(out, 400, None)
+                    continue
 
-        # Unknown line format
-        write_entry(response_path, 400, None)
+                body = line[len("query:") : -1].strip()
+                if "," not in body:
+                    write_entry(out, 400, None)
+                    continue
+
+                store_str, query_string = body.split(",", 1)
+                store_str = store_str.strip()
+                query_string = query_string.strip()
+                if store_str not in ("1", "2"):
+                    write_entry(out, 400, None)
+                    continue
+
+                url = f"{base_url(int(store_str))}/pet-types?{query_string}"
+                try:
+                    r = requests.get(url, timeout=10)
+                    if r.status_code == 200:
+                        write_entry(out, r.status_code, r.json())
+                    else:
+                        write_entry(out, r.status_code, None)
+                except Exception:
+                    write_entry(out, 500, None)
+                continue
+
+            if line.startswith("purchase:"):
+                # format: purchase: <json>;
+                if not line.endswith(";"):
+                    write_entry(out, 400, None)
+                    continue
+
+                payload_raw = line[len("purchase:") : -1].strip()
+                try:
+                    payload = json.loads(payload_raw)
+                except Exception:
+                    write_entry(out, 400, None)
+                    continue
+
+                try:
+                    r = requests.post("http://localhost:5003/purchases", json=payload, timeout=10)
+                    if r.status_code == 201:
+                        write_entry(out, r.status_code, r.json())
+                    else:
+                        write_entry(out, r.status_code, None)
+                except Exception:
+                    write_entry(out, 500, None)
+                continue
+
+            # Unknown line
+            write_entry(out, 400, None)
 
     return 0
 

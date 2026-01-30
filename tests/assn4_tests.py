@@ -49,7 +49,7 @@ PET7_TYPE4 = {"name": "Lazy", "birthdate": "07-08-2018"}
 PET8_TYPE4 = {"name": "Lemon", "birthdate": "27-03-2020"}
 
 
-def _base_url(store_num: int) -> str:
+def base_url(store_num):
     if store_num == 1:
         return "http://localhost:5001"
     if store_num == 2:
@@ -57,16 +57,15 @@ def _base_url(store_num: int) -> str:
     raise ValueError("store_num must be 1 or 2")
 
 
-def _wait_for_service(url: str, timeout_s: int = 60) -> None:
+def wait_for_service(url, timeout_s=60):
     deadline = time.time() + timeout_s
     last_exc = None
     while time.time() < deadline:
         try:
             r = requests.get(url, timeout=2)
-            # Any HTTP response means the server is up.
             if r.status_code in (200, 400, 404, 405, 415):
                 return
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             last_exc = e
         time.sleep(1)
     raise RuntimeError(f"Service not reachable at {url} (last_exc={last_exc})")
@@ -74,17 +73,17 @@ def _wait_for_service(url: str, timeout_s: int = 60) -> None:
 
 def test_assn4_flow():
     # make sure both stores are up
-    _wait_for_service(f"{_base_url(1)}/pet-types")
-    _wait_for_service(f"{_base_url(2)}/pet-types")
+    wait_for_service(f"{base_url(1)}/pet-types")
+    wait_for_service(f"{base_url(2)}/pet-types")
 
     # create pet types in both stores
-    r1 = requests.post(f"{_base_url(1)}/pet-types", json=PET_TYPE1, timeout=10)
-    r2 = requests.post(f"{_base_url(1)}/pet-types", json=PET_TYPE2, timeout=10)
-    r3 = requests.post(f"{_base_url(1)}/pet-types", json=PET_TYPE3, timeout=10)
+    r1 = requests.post(f"{base_url(1)}/pet-types", json=PET_TYPE1, timeout=10)
+    r2 = requests.post(f"{base_url(1)}/pet-types", json=PET_TYPE2, timeout=10)
+    r3 = requests.post(f"{base_url(1)}/pet-types", json=PET_TYPE3, timeout=10)
 
-    r4 = requests.post(f"{_base_url(2)}/pet-types", json=PET_TYPE1, timeout=10)
-    r5 = requests.post(f"{_base_url(2)}/pet-types", json=PET_TYPE2, timeout=10)
-    r6 = requests.post(f"{_base_url(2)}/pet-types", json=PET_TYPE4, timeout=10)
+    r4 = requests.post(f"{base_url(2)}/pet-types", json=PET_TYPE1, timeout=10)
+    r5 = requests.post(f"{base_url(2)}/pet-types", json=PET_TYPE2, timeout=10)
+    r6 = requests.post(f"{base_url(2)}/pet-types", json=PET_TYPE4, timeout=10)
 
     for r in (r1, r2, r3, r4, r5, r6):
         assert r.status_code == 201, f"Expected 201, got {r.status_code}: {r.text}"
@@ -125,18 +124,18 @@ def test_assn4_flow():
     ]
 
     for store, pid, payload in posts:
-        r = requests.post(f"{_base_url(store)}/pet-types/{pid}/pets", json=payload, timeout=10)
+        r = requests.post(f"{base_url(store)}/pet-types/{pid}/pets", json=payload, timeout=10)
         assert r.status_code == 201, f"Expected 201, got {r.status_code}: {r.text}"
 
     # GET /pet-types/{id_2} from store #1 must match PET_TYPE2_VAL fields
-    r = requests.get(f"{_base_url(1)}/pet-types/{id_2}", timeout=10)
+    r = requests.get(f"{base_url(1)}/pet-types/{id_2}", timeout=10)
     assert r.status_code == 200
     body = r.json()
     for k, v in PET_TYPE2_VAL.items():
         assert body.get(k) == v, f"Field mismatch for {k}: expected {v}, got {body.get(k)}"
 
     # GET /pet-types/{id_6}/pets from store #2 contains pets with expected fields
-    r = requests.get(f"{_base_url(2)}/pet-types/{id_6}/pets", timeout=10)
+    r = requests.get(f"{base_url(2)}/pet-types/{id_6}/pets", timeout=10)
     assert r.status_code == 200
     pets = r.json()
     assert isinstance(pets, list)
