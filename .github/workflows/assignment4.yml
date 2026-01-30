@@ -9,19 +9,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Detect app directory
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -d "cloud-computation/assignment4-cloud-computing" ]; then
-            echo "APP_DIR=cloud-computation/assignment4-cloud-computing" >> "$GITHUB_ENV"
-          else
-            echo "APP_DIR=." >> "$GITHUB_ENV"
-          fi
-
       - name: Initialize log.txt (lines 1-2)
         shell: bash
-        working-directory: ${{ env.APP_DIR }}
         run: |
           set -euo pipefail
           start_time="$(date -Iminutes)"
@@ -31,7 +20,6 @@ jobs:
       - name: Build images (pet-store, pet-order)
         id: build_images
         shell: bash
-        working-directory: ${{ env.APP_DIR }}
         run: |
           set +e
           store_ok=0
@@ -65,7 +53,6 @@ jobs:
 
       - name: Save images to artifacts
         shell: bash
-        working-directory: ${{ env.APP_DIR }}
         run: |
           set -euo pipefail
           docker save pet-store:assn4 pet-order:assn4 -o images_assn4.tar
@@ -74,7 +61,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: images_assn4
-          path: ${{ env.APP_DIR }}/images_assn4.tar
+          path: images_assn4.tar
           if-no-files-found: error
 
       - name: Upload log artifact
@@ -82,7 +69,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: log
-          path: ${{ env.APP_DIR }}/log.txt
+          path: log.txt
           if-no-files-found: error
 
   test:
@@ -90,16 +77,6 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
-
-      - name: Detect app directory
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -d "cloud-computation/assignment4-cloud-computing" ]; then
-            echo "APP_DIR=cloud-computation/assignment4-cloud-computing" >> "$GITHUB_ENV"
-          else
-            echo "APP_DIR=." >> "$GITHUB_ENV"
-          fi
 
       - name: Download images artifact
         uses: actions/download-artifact@v4
@@ -113,14 +90,12 @@ jobs:
 
       - name: Load docker images
         shell: bash
-        working-directory: ${{ env.APP_DIR }}
         run: |
           set -euo pipefail
           docker load -i images_assn4.tar
 
       - name: Start app containers
         shell: bash
-        working-directory: ${{ env.APP_DIR }}
         run: |
           set -euo pipefail
           docker compose up -d
@@ -141,7 +116,6 @@ jobs:
 
       - name: Wait for ports 5001/5002/5003
         shell: bash
-        working-directory: ${{ env.APP_DIR }}
         run: |
           set -euo pipefail
           for port in 5001 5002 5003; do
@@ -161,7 +135,6 @@ jobs:
 
       - name: Install test dependencies
         shell: bash
-        working-directory: ${{ env.APP_DIR }}
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
@@ -170,7 +143,6 @@ jobs:
       - name: Run pytest and capture output
         id: run_pytest
         shell: bash
-        working-directory: ${{ env.APP_DIR }}
         run: |
           set -o pipefail
           pytest -v tests/assn4_tests.py | tee assn4_test_results.txt
@@ -178,7 +150,6 @@ jobs:
       - name: Update log with pytest result (line 5)
         if: always()
         shell: bash
-        working-directory: ${{ env.APP_DIR }}
         run: |
           set -euo pipefail
           if [ "${{ steps.run_pytest.outcome }}" = "success" ]; then
@@ -192,7 +163,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: assn4_test_results
-          path: ${{ env.APP_DIR }}/assn4_test_results.txt
+          path: assn4_test_results.txt
           if-no-files-found: error
 
       - name: Upload log artifact (updated)
@@ -200,14 +171,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: log
-          path: ${{ env.APP_DIR }}/log.txt
+          path: log.txt
           if-no-files-found: error
           overwrite: true
 
       - name: Stop containers
         if: always()
         shell: bash
-        working-directory: ${{ env.APP_DIR }}
         run: |
           docker compose down -v || true
 
@@ -218,16 +188,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Detect app directory
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -d "cloud-computation/assignment4-cloud-computing" ]; then
-            echo "APP_DIR=cloud-computation/assignment4-cloud-computing" >> "$GITHUB_ENV"
-          else
-            echo "APP_DIR=." >> "$GITHUB_ENV"
-          fi
-
       - name: Download images artifact
         uses: actions/download-artifact@v4
         with:
@@ -235,21 +195,18 @@ jobs:
 
       - name: Load docker images
         shell: bash
-        working-directory: ${{ env.APP_DIR }}
         run: |
           set -euo pipefail
           docker load -i images_assn4.tar
 
       - name: Start app containers
         shell: bash
-        working-directory: ${{ env.APP_DIR }}
         run: |
           set -euo pipefail
           docker compose up -d
 
       - name: Wait for ports 5001/5002/5003
         shell: bash
-        working-directory: ${{ env.APP_DIR }}
         run: |
           set -euo pipefail
           for port in 5001 5002 5003; do
@@ -269,7 +226,6 @@ jobs:
 
       - name: Install query dependencies
         shell: bash
-        working-directory: ${{ env.APP_DIR }}
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
@@ -277,7 +233,6 @@ jobs:
 
       - name: Run query job (generate response.txt)
         shell: bash
-        working-directory: ${{ env.APP_DIR }}
         run: |
           set -euo pipefail
           python scripts/run_query_job.py
@@ -286,13 +241,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: response
-          path: ${{ env.APP_DIR }}/response.txt
+          path: response.txt
           if-no-files-found: error
 
       - name: Stop containers
         if: always()
         shell: bash
-        working-directory: ${{ env.APP_DIR }}
         run: |
           docker compose down -v || true
 
