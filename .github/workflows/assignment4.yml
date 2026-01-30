@@ -72,11 +72,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: images_assn4
+          path: .
 
       - name: Download log artifact
         uses: actions/download-artifact@v4
         with:
           name: log
+          path: .
 
       - name: Load docker images
         shell: bash
@@ -130,7 +132,8 @@ jobs:
         id: run_pytest
         shell: bash
         run: |
-          pytest -v tests/assn4_tests.py > assn4_test_results.txt
+          cd tests
+          pytest -v assn4_tests.py > ../assn4_test_results.txt
 
       - name: Update log with pytest result (line 5)
         if: always()
@@ -176,6 +179,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: images_assn4
+          path: .
 
       - name: Load docker images
         shell: bash
