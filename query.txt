@@ -1,4 +1,0 @@
-query: 1,type=Australian Shepherd;
-query: 2,family=Felidae;
-purchase: {"purchaser":"SanityCheck","pet-type":"Golden Retriever","store":1,"pet-name":"Lander","purchase-id":"IGNORED"};
-
