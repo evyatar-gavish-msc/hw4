@@ -20,6 +20,7 @@ services:
       - pet-store-network
 
   pet-store1:
+    image: pet-store:assn4
     build: ./pet_store
     container_name: pet-store1
     ports:
@@ -36,9 +37,9 @@ services:
       - ./images:/app/images
     networks:
       - pet-store-network
-    restart: on-failure
 
   pet-store2:
+    image: pet-store:assn4
     build: ./pet_store
     container_name: pet-store2
     ports:
@@ -55,11 +56,11 @@ services:
       - ./images:/app/images
     networks:
       - pet-store-network
-    restart: on-failure
 
-  pet-order1:
+  pet-order:
+    image: pet-order:assn4
     build: ./pet_order
-    container_name: pet-order1
+    container_name: pet-order
     ports:
       - "5003:5003"
     expose:
@@ -73,40 +74,6 @@ services:
       - mongodb-orders
       - pet-store1
       - pet-store2
-    networks:
-      - pet-store-network
-    restart: on-failure
-
-  pet-order2:
-    build: ./pet_order
-    container_name: pet-order2
-    expose:
-      - 5003
-    environment:
-      - MONGO_URI=mongodb://mongodb-orders:27017/
-      - PORT=5003
-      - PET_STORE1_URL=http://pet-store1:5001
-      - PET_STORE2_URL=http://pet-store2:5001
-    depends_on:
-      - mongodb-orders
-      - pet-store1
-      - pet-store2
-    networks:
-      - pet-store-network
-    restart: on-failure
-
-  nginx:
-    image: nginx:latest
-    container_name: nginx-proxy
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - pet-store1
-      - pet-store2
-      - pet-order1
-      - pet-order2
     networks:
       - pet-store-network
 
